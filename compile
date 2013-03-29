@@ -1,0 +1,3 @@
+#!/bin/bash
+rustc driver.rc > /dev/null
+cd java && make all && cd .. > /dev/null

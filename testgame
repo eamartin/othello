@@ -1,0 +1,2 @@
+#!/bin/bash
+java -cp OthelloFramework.jar TestGame driver SimplePlayer
