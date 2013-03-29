@@ -79,7 +79,8 @@ fn get_positive_diag(board_side: u64, start: Position) -> u8 {
     let mut diag = 0u8;
     let mut offset = 0;
     while pos.in_bounds() {
-        diag += (board_side & (1u64 << get_index(pos))) >> (index - offset - 1);
+        let index = get_index(pos);
+        diag += (board_side & (1u64 << index)) >> (index - offset - 1);
     }
     return diag;
 }
@@ -87,7 +88,7 @@ fn get_positive_diag(board_side: u64, start: Position) -> u8 {
 
 fn get_linear_moves(my_row: u8, other_row: u8) -> ~[int] {
     let get_bit = |data: u8, idx| (data & (1u8 << idx)) != 0;
-    let mut moves = vec::with_capacity<int>(8);
+    let mut moves: ~[int] = vec::with_capacity(8);
 
     for int::range(1, 7) |index| {
         if get_bit(other_row, index) {
@@ -174,7 +175,7 @@ pub impl Board {
             let my_row = get_row(my_stones, row_num);
             let other_row = get_row(other_stones, row_num);
 
-            get_linear_moves(my_row, other_row).each |col_num| {
+            do get_linear_moves(my_row, other_row).each |col_num| {
                 moves.push(Position(row_num, col_num));
             }
         }
@@ -184,7 +185,7 @@ pub impl Board {
             let my_col = get_col(my_stones, col_num);
             let other_col = get_col(other_stones, col_num);
 
-            get_linear_moves(my_col, other_col).each |row_num| {
+            do get_linear_moves(my_col, other_col).each |row_num| {
                 moves.push(Position(row_num, col_num));
             }
         }
@@ -196,12 +197,14 @@ pub impl Board {
             let my_diag = get_positive_diag(my_stones, start);
             let other_diag = get_positive_diag(other_stones, start);
 
-            get_linear_move(my_diag, other_diag).each |offset| {
+            do get_linear_moves(my_diag, other_diag).each |offset| {
                 moves.push(start.add(Position(offset, offset)));
             }
         }
 
         // need to add negative diagonals
+
+        return moves;
     }
 
     fn print_board(&self) {
