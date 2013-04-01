@@ -57,37 +57,51 @@ fn get_index(pos: Position) -> int {
 }
 
 fn get_row(board_side: u64, row_num: int) -> u8 {
-    let mut row = 0u8;
-    for int::range(0, 8) |col_num| {
-        let index = 8 * row_num + col_num;
-        row += ((board_side & (1u64 << index)) >> (index - col_num - 1));
-    }
-    return row;
+    let offset = row_num * 8;
+    ((board_side & (255 << offset)) >> offset) as u8
 }
 
 fn get_col(board_side: u64, col_num: int) -> u8 {
-    let mut col = 0u8;
+    let mut col = 0u64;
     for int::range(0, 8) |row_num| {
         let index = 8 * row_num + col_num;
-        col += (board_side & (1u64 << index)) >> (index - row_num - 1);
+        col += (board_side & (1u64 << index)) >> (index - row_num);
     }
-    return col;
+    return col as u8;
 }
 
 fn get_positive_diag(board_side: u64, start: Position) -> u8 {
     let mut pos = start;
-    let mut diag = 0u8;
+    let mut diag = 0u64;
     let mut offset = 0;
     while pos.in_bounds() {
         let index = get_index(pos);
-        diag += (board_side & (1u64 << index)) >> (index - offset - 1);
+        diag += (board_side & (1u64 << index)) >> (index - offset);
+
+        offset += 1;
+        pos = start.add(Position(offset, offset));
     }
-    return diag;
+    return diag as u8;
+}
+
+fn get_negative_diag(board_side: u64, start: Position) -> u8 {
+    let mut pos = start;
+    let mut diag = 0u64;
+    let mut offset = 0;
+    while pos.in_bounds() {
+        let index = get_index(pos);
+        diag += (board_side & (1u64 << index)) >> (index - offset) as u8;
+
+        offset += 1;
+        pos = start.add(Position(offset, -offset));
+    }
+
+    return diag as u8;
 }
 
 
 fn get_linear_moves(my_row: u8, other_row: u8) -> ~[int] {
-    let get_bit = |data: u8, idx| (data & (1u8 << idx)) != 0;
+    let get_bit = |data: u8, idx: int| (data & (1u8 << idx)) != 0;
     let mut moves: ~[int] = vec::with_capacity(8);
 
     for int::range(1, 7) |index| {
@@ -99,7 +113,7 @@ fn get_linear_moves(my_row: u8, other_row: u8) -> ~[int] {
                         moves.push(index - 1);
                         break;
                     }
-                    if !get_bit(my_row | other_row) {
+                    if !get_bit(my_row | other_row, j) {
                         break;
                     }
                 }
@@ -112,13 +126,14 @@ fn get_linear_moves(my_row: u8, other_row: u8) -> ~[int] {
                         moves.push(index + 1);
                         break;
                     }
-                    if !get_bit(my_row | other_row) {
+                    if !get_bit(my_row | other_row, j) {
                         break;
                     }
                 }
             }
         }
     }
+    return moves;
 }
 
 #[deriving(Eq)]
@@ -165,7 +180,7 @@ pub impl Board {
     Get moves that are available to side.
     */
     fn get_moves(&self, side: Color) -> ~[Position] {
-        let mut moves = vec::with_capacity<Position>(32);
+        let mut moves: ~[Position] = vec::with_capacity(32);
 
         let my_stones = self.get_stones(side);
         let other_stones = self.get_stones(side.other());
@@ -175,8 +190,8 @@ pub impl Board {
             let my_row = get_row(my_stones, row_num);
             let other_row = get_row(other_stones, row_num);
 
-            do get_linear_moves(my_row, other_row).each |col_num| {
-                moves.push(Position(row_num, col_num));
+            for get_linear_moves(my_row, other_row).each |col_num| {
+                moves.push(Position(row_num, *col_num));
             }
         }
 
@@ -185,24 +200,34 @@ pub impl Board {
             let my_col = get_col(my_stones, col_num);
             let other_col = get_col(other_stones, col_num);
 
-            do get_linear_moves(my_col, other_col).each |row_num| {
-                moves.push(Position(row_num, col_num));
+            for get_linear_moves(my_col, other_col).each |row_num| {
+                moves.push(Position(*row_num, col_num));
             }
         }
 
         // positive diagonals
-        let mut pos_starts = vec::from_fn(6, |x| Position(x, 0)) +
-            vec::from_fn(5, |y| Position(0, y + 1));
-        do pos_starts.each |start| {
-            let my_diag = get_positive_diag(my_stones, start);
-            let other_diag = get_positive_diag(other_stones, start);
+        let pos_starts = vec::from_fn(6, |x| Position(x as int, 0)) +
+            vec::from_fn(5, |y| Position(0, y as int + 1));
+        for pos_starts.each |start| {
+            let my_diag = get_positive_diag(my_stones, *start);
+            let other_diag = get_positive_diag(other_stones, *start);
 
-            do get_linear_moves(my_diag, other_diag).each |offset| {
-                moves.push(start.add(Position(offset, offset)));
+            for get_linear_moves(my_diag, other_diag).each |offset| {
+                moves.push(start.add(Position(*offset, *offset)));
             }
         }
 
-        // need to add negative diagonals
+        // negative diagonals
+        let neg_starts = vec::from_fn(6, |x| Position(x as int, 7)) +
+            vec::from_fn(5, |y| Position(0, 6 - y as int));
+        for neg_starts.each |start| {
+            let my_diag = get_negative_diag(my_stones, *start);
+            let other_diag = get_positive_diag(other_stones, *start);
+
+            for get_linear_moves(my_diag, other_diag).each |offset| {
+                moves.push(start.add(Position(*offset, -*offset)));
+            }
+        }
 
         return moves;
     }
