@@ -35,9 +35,31 @@ fn test_init() {
 
 #[test]
 fn test_get_moves() {
-    let b = Board::new();
-    let moves = b.get_moves_around_stone(Black, Position(3, 3));
-    fail_unless!(moves.len() > 0);
+    let mut b = Board::new();
+
+    let mut moves = b.get_moves(Black);
+    fail_unless!(moves.contains(&Position(3, 2)));
+    fail_unless!(moves.contains(&Position(2, 3)));
+    fail_unless!(moves.contains(&Position(4, 5)));
+    fail_unless!(moves.contains(&Position(5, 4)));
+    fail_unless!(moves.len() == 4);
+
+    b = b.make_move(Black, Position(3, 2));
+    moves = b.get_moves(White);
+    fail_unless!(moves.contains(&Position(2, 4)));
+    fail_unless!(moves.contains(&Position(4, 2)));
+    fail_unless!(moves.contains(&Position(2, 2)));
+    fail_unless!(moves.len() == 3);
+
+    b = b.make_move(White, Position(4, 2));
+    moves = b.get_moves(Black);
+    debug(copy moves);
+    fail_unless!(moves.contains(&Position(5, 1)));
+    fail_unless!(moves.contains(&Position(5, 2)));
+    fail_unless!(moves.contains(&Position(5, 3)));
+    fail_unless!(moves.contains(&Position(5, 4)));
+    fail_unless!(moves.contains(&Position(5, 5)));
+    fail_unless!(moves.len() == 5);
 }
 
 fn test_board_correctness(b: Board, black: ~[Position], white: ~[Position]) {

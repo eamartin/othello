@@ -180,32 +180,38 @@ pub impl Board {
     Get moves that are available to side.
     */
     fn get_moves(&self, side: Color) -> ~[Position] {
+        debug("=======================");
         let mut moves: ~[Position] = vec::with_capacity(32);
 
         let my_stones = self.get_stones(side);
         let other_stones = self.get_stones(side.other());
 
         // rows
+        debug("ROW MOVES");
         for int::range(0, 8) |row_num| {
             let my_row = get_row(my_stones, row_num);
             let other_row = get_row(other_stones, row_num);
 
             for get_linear_moves(my_row, other_row).each |col_num| {
-                moves.push(Position(row_num, *col_num));
+                moves.push(Position(*col_num, row_num));
+                debug(moves[moves.len() - 1]);
             }
         }
 
         // column
+        debug("COL MOVES");
         for int::range(0, 8) |col_num| {
             let my_col = get_col(my_stones, col_num);
             let other_col = get_col(other_stones, col_num);
 
             for get_linear_moves(my_col, other_col).each |row_num| {
-                moves.push(Position(*row_num, col_num));
+                moves.push(Position(col_num, *row_num));
+                debug(moves[moves.len() - 1]);
             }
         }
 
         // positive diagonals
+        debug("POS DIAG");
         let pos_starts = vec::from_fn(6, |x| Position(x as int, 0)) +
             vec::from_fn(5, |y| Position(0, y as int + 1));
         for pos_starts.each |start| {
@@ -213,11 +219,15 @@ pub impl Board {
             let other_diag = get_positive_diag(other_stones, *start);
 
             for get_linear_moves(my_diag, other_diag).each |offset| {
+                debug(*start);
+                debug(*offset);
                 moves.push(start.add(Position(*offset, *offset)));
+                debug(moves[moves.len() - 1]);
             }
         }
 
         // negative diagonals
+        debug("NEG DIAG");
         let neg_starts = vec::from_fn(6, |x| Position(x as int, 7)) +
             vec::from_fn(5, |y| Position(0, 6 - y as int));
         for neg_starts.each |start| {
@@ -226,6 +236,7 @@ pub impl Board {
 
             for get_linear_moves(my_diag, other_diag).each |offset| {
                 moves.push(start.add(Position(*offset, -*offset)));
+                debug(moves[moves.len() - 1]);
             }
         }
 
